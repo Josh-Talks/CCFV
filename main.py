@@ -2,10 +2,10 @@ import argparse
 import numpy as np
 import json
 import torch
-from utils.sliding_window_sampling import ms_sliding_window_sampling
-from utils.get_model import get_model
-from utils.ccfv import cal_variety, cal_w_distance
-from utils.utility import get_loader, setup_seed, load_pretrained_model
+from CCFV.utils.sliding_window_sampling import ms_sliding_window_sampling
+from CCFV.utils.get_model import get_model
+from CCFV.utils.ccfv import cal_variety, cal_w_distance
+from CCFV.utils.utility import get_loader, setup_seed, load_pretrained_model
 
 def evaluate(configs, test_loader, model):
     model.eval()

@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from domain_gap.utils import load_h5
-from utils.sliding_window_sampling import ms_sliding_window_sampling
+from CCFV.utils.sliding_window_sampling import ms_sliding_window_sampling
 from pytorch3dunet.unet3d.model import UNet2D
 
 data_path = "/g/kreshuk/talks/data/epfl/resized_pixels/test.h5"

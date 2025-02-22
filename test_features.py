@@ -1,4 +1,4 @@
-from utils.sliding_window_sampling import sampling_2d_images
+from CCFV.utils.sliding_window_sampling import sampling_2d_images
 import torch
 import torch.nn as nn
 from typing import Callable
@@ -10,7 +10,7 @@ from pytorch3dunet.unet3d.model import UNet2D
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from tqdm import tqdm
-from utils.ccfv import cal_variety, cal_w_distance
+from CCFV.utils.ccfv import cal_variety, cal_w_distance
 
 transformer_config = {
     "raw": [

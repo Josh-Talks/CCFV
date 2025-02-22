@@ -5,3 +5,5 @@
 *.ali
 *.vscode
 __pycache__
+*.egg-info
+*.toml
