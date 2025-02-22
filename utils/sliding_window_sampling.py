@@ -142,7 +142,7 @@ def ms_sliding_window_sampling(
         torch.float32), min=min_non_zero).to(compute_dtype)
 
     # for each patch
-    labels = labels.as_tensor()
+    #labels = labels.as_tensor()
     feat_extractor = FeatureExtractor(predictor, layers)
     sample_dict = {layer:{j:[] for j in range(len(torch.unique(labels)))} for layer in layers}
     res_dict = {layer:{j:[] for j in range(len(torch.unique(labels)))} for layer in layers}
@@ -166,13 +166,15 @@ def ms_sliding_window_sampling(
              for win_slice in unravel_slice]
         ).to(sw_device)
         
+        #window_data = torch.squeeze(window_data, dim=-3)
         features = feat_extractor(window_data)
         feat_extractor.remove_handler()
 
         out_shape = roi_size
         for layer in layers:
             seg_prob_out = features[layer][0]
-            if seg_prob_out.shape != out_shape:
+            if seg_prob_out.shape != out_shape[1:]:
+                #seg_prob_out = F.interpolate(seg_prob_out, size=out_shape, mode='trilinear')
                 seg_prob_out = F.interpolate(seg_prob_out, size=out_shape, mode='trilinear')
             for idx, prob_out in zip(unravel_slice, seg_prob_out): 
                 for lb in sample_dict[layer].keys():
@@ -190,4 +192,54 @@ def ms_sliding_window_sampling(
         for lb in res_dict[decoder].keys():
             res_dict[decoder][lb] = np.array(res_dict[decoder][lb])
 
+    return res_dict
+
+
+def sampling_2d_images(
+    layers:list,
+    sample_num: dict,
+    inputs: torch.Tensor,
+    labels: torch.Tensor,
+    predictor: Callable[..., Union[torch.Tensor, Sequence[torch.Tensor], Dict[Any, torch.Tensor]]],
+):
+    """function to sample pointwise feature vectors from layers of model for 2d input images
+     without patching the input image.
+
+    Args:
+        features (Dict[str, np.ndarray]): features extracted by a network and saved per layer in a dictionary
+        layers (list): layers of netwrork features were extracted from
+        sample_num (dict): number of points to sample for each layer
+        labels (torch.Tensor): input labels for set of patches (B, C, D, H, W)
+
+    Returns:
+        _type_: _description_
+    """
+    feat_extractor = FeatureExtractor(predictor, layers)
+    features = feat_extractor(inputs)
+    feat_extractor.remove_handler()
+    sample_dict = {layer:{j:[] for j in range(len(torch.unique(labels)))} for layer in layers}
+    res_dict = {layer:{j:[] for j in range(len(torch.unique(labels)))} for layer in layers}
+    for layer in layers:
+        for lb in torch.unique(labels):
+            lb_idx = torch.nonzero(labels==lb, as_tuple=False).cpu().numpy()
+            rand_idx = np.random.choice(len(lb_idx), min(len(lb_idx), sample_num[layer]), replace=False)
+            sample_dict[layer][int(lb)] = lb_idx[rand_idx]
+        
+        seg_prob_out = features[layer][0]
+        #output_shape equals the spatial dimensions of labels input which has shape (B, C, D, H, W)
+        out_shape = labels.shape[2:]
+        if seg_prob_out.shape != out_shape:
+            seg_prob_out = F.interpolate(seg_prob_out, size=out_shape, mode='bilinear')
+        for prob_out in seg_prob_out:
+            for lb in sample_dict[layer].keys():
+                visited = np.array([])
+                for i in range(len(sample_dict[layer][lb])):
+                    sample_idx = sample_dict[layer][lb][i]
+                    point_feat = prob_out[:, sample_idx[2], sample_idx[3]].cpu().numpy()
+                    res_dict[layer][lb].append(point_feat)
+                    visited = np.append(visited, i)
+                sample_dict[layer][lb] = np.delete(sample_dict[layer][lb], visited.astype(np.int64), axis=0)
+    for decoder in res_dict.keys():
+        for lb in res_dict[decoder].keys():
+            res_dict[decoder][lb] = np.array(res_dict[decoder][lb])
     return res_dict
